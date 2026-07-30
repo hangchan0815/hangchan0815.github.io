@@ -11,6 +11,7 @@
   const restartButton = document.querySelector('#restart-button');
   const scoreValue = document.querySelector('#score');
   const highScoreValue = document.querySelector('#high-score');
+  const foodValue = document.querySelector('#food-count');
   const statusValue = document.querySelector('#game-status');
   const directionButtons = document.querySelectorAll('[data-direction]');
   const CELL = 24;
@@ -21,11 +22,12 @@
   const EXPLOSION_MS = 1100;
   const RESPAWN_MS = 2000;
   const ENEMY_COUNT = 5;
+  const MAX_FOOD = 10;
   const HIGH_SCORE_KEY = 'hangchan-worm-high-score';
   const directions = {
     up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 }
   };
-  const game = { snake: [], direction: { x: 1, y: 0 }, nextDirection: { x: 1, y: 0 }, food: null, enemies: [], score: 0, highScore: readHighScore(), running: false, paused: false, gameOver: false, frame: 0, lastTime: 0, moveElapsed: 0, enemyElapsed: 0, nextExplosionAt: 0 };
+  const game = { snake: [], direction: { x: 1, y: 0 }, nextDirection: { x: 1, y: 0 }, food: null, enemies: [], score: 0, foodCount: 0, highScore: readHighScore(), running: false, paused: false, gameOver: false, completed: false, frame: 0, lastTime: 0, moveElapsed: 0, enemyElapsed: 0, nextExplosionAt: 0 };
 
   function readHighScore() {
     try { return Number.parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0', 10) || 0; } catch { return 0; }
@@ -59,9 +61,11 @@
     game.enemies = [];
     for (let i = 0; i < ENEMY_COUNT; i += 1) game.enemies.push({ ...randomFreeCell(), dx: i % 2 ? -1 : 1, dy: 0, active: true, exploding: false, respawnAt: 0, blastUntil: 0 });
     game.score = 0;
+    game.foodCount = 0;
     game.running = false;
     game.paused = false;
     game.gameOver = false;
+    game.completed = false;
     game.moveElapsed = 0;
     game.enemyElapsed = 0;
     updateHud('READY');
@@ -71,8 +75,9 @@
   function updateHud(status) {
     if (scoreValue) scoreValue.textContent = String(game.score).padStart(4, '0');
     if (highScoreValue) highScoreValue.textContent = String(game.highScore).padStart(4, '0');
+    if (foodValue) foodValue.textContent = `${game.foodCount}/${MAX_FOOD}`;
     if (statusValue) statusValue.textContent = status;
-    if (pauseButton) pauseButton.disabled = !game.running || game.gameOver;
+    if (pauseButton) pauseButton.disabled = !game.running || game.gameOver || game.completed;
   }
 
   function setOverlay(title, message, buttonText) {
@@ -97,10 +102,21 @@
   function endGame(reason) {
     game.running = false;
     game.gameOver = true;
+    game.completed = false;
     if (game.frame) cancelAnimationFrame(game.frame);
     if (game.score > game.highScore) { game.highScore = game.score; writeHighScore(); }
     updateHud('GAME OVER');
     setOverlay('Game over.', reason, '다시 시작');
+  }
+
+  function completeGame() {
+    game.running = false;
+    game.gameOver = false;
+    game.completed = true;
+    if (game.frame) cancelAnimationFrame(game.frame);
+    if (game.score > game.highScore) { game.highScore = game.score; writeHighScore(); }
+    updateHud('COMPLETE');
+    setOverlay('Complete!', '먹이 10개를 모두 먹었습니다.', '다시 시작');
   }
 
   function setDirection(name) {
@@ -120,6 +136,8 @@
     game.snake.unshift(nextHead);
     if (samePosition(nextHead, game.food)) {
       game.score += 10;
+      game.foodCount += 1;
+      if (game.foodCount >= MAX_FOOD) { completeGame(); return; }
       game.food = randomFreeCell();
     } else game.snake.pop();
   }
