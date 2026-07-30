@@ -137,6 +137,7 @@
     if (samePosition(nextHead, game.food)) {
       game.score += 10;
       game.foodCount += 1;
+      updateHud('RUNNING');
       if (game.foodCount >= MAX_FOOD) { completeGame(); return; }
       game.food = randomFreeCell();
     } else game.snake.pop();
