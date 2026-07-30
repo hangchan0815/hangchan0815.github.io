@@ -198,6 +198,7 @@
     if (now >= game.nextExplosionAt) explodeEnemies(now);
     respawnEnemies(now);
     checkHazards(now);
+    if (game.running) updateHud('RUNNING');
     draw();
   }
 
